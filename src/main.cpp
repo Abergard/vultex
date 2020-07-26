@@ -1,35 +1,73 @@
+// https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Base_code
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-
+#include <cstdlib>
+#include <exception>
 #include <iostream>
+#include <spdlog/spdlog.h>
+#include <stdexcept>
 
-int main() {
-    glfwInit();
+const uint32_t WIDTH = 800;
+const uint32_t HEIGHT = 600;
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
-
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-    std::cout << extensionCount << " extensions supported\n";
-
-    glm::mat4 matrix;
-    glm::vec4 vec;
-    auto test = matrix * vec;
-
-    while(!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
+class HelloTrangleApplication
+{
+public:
+    void run()
+    {
+        initWindow();
+        initVulkan();
+        mainLoop();
+        cleanup();
     }
 
-    glfwDestroyWindow(window);
+private:
+    void initWindow()
+    {
+        spdlog::info("Initialize window");
 
-    glfwTerminate();
+        glfwInit();
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    return 0;
+        window = glfwCreateWindow(WIDTH, HEIGHT, "Vultex", nullptr, nullptr);
+    }
+
+    void initVulkan()
+    {
+        spdlog::info("Initialize Vulkan");
+    }
+
+    void mainLoop()
+    {
+        spdlog::info("Start loop");        
+        while (!glfwWindowShouldClose(window))
+        {
+            glfwPollEvents();
+        }
+        spdlog::info("Loop finished");
+    }
+
+    void cleanup()
+    {
+        spdlog::info("Cleanup resources");
+        glfwDestroyWindow(window);
+        glfwTerminate();
+    }
+
+    GLFWwindow* window{nullptr};
+};
+
+int main()
+try
+{
+    HelloTrangleApplication{}.run();
+
+    return EXIT_SUCCESS;
+}
+catch (const std::exception& e)
+{
+    return EXIT_FAILURE;
 }
