@@ -1,5 +1,6 @@
 // https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Base_code
 
+#include <iterator>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -8,6 +9,7 @@
 #include <exception>
 #include <iostream>
 #include <map>
+#include <span>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <string_view>
@@ -15,35 +17,65 @@
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-using ExtensionMap = std::map<std::string_view, int>;
-
-auto get_icon(const int id)
+class VulkanExtensionSuppportInfo
 {
-    switch (id)
+public:
+    VulkanExtensionSuppportInfo()
     {
-    case -1:
-        return " ! ";
-    case 0:
-        return "[x]";
-    case 1:
-        return "[ ]";
-    default:
-        return " ? ";
-    }
-};
+        std::uint32_t extensionCount{0};
+        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 
-bool mark_glfw_required_extensions(ExtensionMap& extensions, const std::uint32_t count, const char** names)
-{
-    auto all_supported{true};
-    for (auto i = 0; i < count; ++i)
-    {
-        if (-1 == --extensions[*(names + i)])
+        std::vector<VkExtensionProperties> extension_properties(extensionCount);
+        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extension_properties.data());
+
+        for (const auto& extension : extension_properties)
         {
-            all_supported = false;
+            // the use of span is not needed here, however it is done to silent a warning about array decay
+            extensions[std::span<const char>{extension.extensionName}.data()] = 1;
         }
     }
-    return all_supported;
-}
+
+    bool mark_glfw_required_extensions(const std::uint32_t count, const char** names)
+    {
+        auto all_supported{true};
+        for (auto i = 0; i < count; ++i)
+        {
+            if (-1 == --extensions[*std::next(names, i)])
+            {
+                all_supported = false;
+            }
+        }
+        return all_supported;
+    }
+
+    void log_extension_list()
+    {
+        spdlog::info("Extensions status:");
+        for (const auto& [name, id] : extensions)
+        {
+            spdlog::info("\t {} {}", get_icon(id), name);
+        }
+    }
+
+private:
+    static const char* get_icon(const int id)
+    {
+        switch (id)
+        {
+        case -1:
+            return " ! ";
+        case 0:
+            return "[x]";
+        case 1:
+            return "[ ]";
+        default:
+            return " ? ";
+        }
+    };
+
+    using ExtensionMap = std::map<std::string, int>;
+    ExtensionMap extensions{};
+};
 
 class HelloTrangleApplication
 {
@@ -92,19 +124,7 @@ private:
 
         // prepare extensions
 
-        // check supported vulkan exctensions
-        std::uint32_t extensionCount{0};
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-        std::vector<VkExtensionProperties> extensions(extensionCount);
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-
-        ExtensionMap extension_map{};
-
-        for (const auto& extension : extensions)
-        {
-            ++extension_map[extension.extensionName];
-        }
+        VulkanExtensionSuppportInfo extensionSupportInfo{};
 
         // get vulkan extensions required by GLFW
         std::uint32_t glfwExtensionCount = 0;
@@ -112,18 +132,14 @@ private:
 
         // mark extensions requried by glfw
         const auto allGlfwExtensionsSupported =
-            mark_glfw_required_extensions(extension_map, glfwExtensionCount, glfwExtensions);
+            extensionSupportInfo.mark_glfw_required_extensions(glfwExtensionCount, glfwExtensions);
 
         spdlog::info("EnabledExtensionCount: {}", glfwExtensionCount);
         createInfo.enabledExtensionCount = glfwExtensionCount;
         createInfo.ppEnabledExtensionNames = glfwExtensions;
         createInfo.enabledLayerCount = 0;
 
-        spdlog::info("Extensions status:");
-        for (auto& [name, id] : extension_map)
-        {
-            spdlog::info("\t {} {}", get_icon(id), name);
-        }
+        extensionSupportInfo.log_extension_list();
 
         if (!allGlfwExtensionsSupported || VK_SUCCESS != vkCreateInstance(&createInfo, nullptr, &instance))
         {
