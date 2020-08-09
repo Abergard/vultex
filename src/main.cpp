@@ -1,81 +1,25 @@
 // https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Base_code
 
-#include <iterator>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <fmt/format.h>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <span>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <string_view>
 
+#include "vulkan_debug.hpp"
+#include "vulkan_property_support_info.hpp"
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
-
-class VulkanExtensionSuppportInfo
-{
-public:
-    VulkanExtensionSuppportInfo()
-    {
-        std::uint32_t extensionCount{0};
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-        std::vector<VkExtensionProperties> extension_properties(extensionCount);
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extension_properties.data());
-
-        for (const auto& extension : extension_properties)
-        {
-            // the use of span is not needed here, however it is done to silent a warning about array decay
-            extensions[std::span<const char>{extension.extensionName}.data()] = 1;
-        }
-    }
-
-    bool mark_glfw_required_extensions(const std::uint32_t count, const char** names)
-    {
-        auto all_supported{true};
-        for (auto i = 0; i < count; ++i)
-        {
-            if (-1 == --extensions[*std::next(names, i)])
-            {
-                all_supported = false;
-            }
-        }
-        return all_supported;
-    }
-
-    void log_extension_list()
-    {
-        spdlog::info("Extensions status:");
-        for (const auto& [name, id] : extensions)
-        {
-            spdlog::info("\t {} {}", get_icon(id), name);
-        }
-    }
-
-private:
-    static const char* get_icon(const int id)
-    {
-        switch (id)
-        {
-        case -1:
-            return " ! ";
-        case 0:
-            return "[x]";
-        case 1:
-            return "[ ]";
-        default:
-            return " ? ";
-        }
-    };
-
-    using ExtensionMap = std::map<std::string, int>;
-    ExtensionMap extensions{};
-};
 
 class HelloTrangleApplication
 {
@@ -104,10 +48,43 @@ private:
     {
         spdlog::info("Initialize Vulkan");
         createInstance();
+        setupDebugMessenger();
+    }
+    void setupDebugMessenger()
+    {
+        if constexpr (!enableValidationLayers)
+        {
+            return;
+        }
+
+        spdlog::info("Initialize debug messenger");
+
+        VkDebugUtilsMessengerCreateInfoEXT createInfo{};
+        populateDebugMessengerCreateInfo(createInfo);
+
+        if (VK_SUCCESS != CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger))
+        {
+            throw std::runtime_error("failed to set up debug messenger!");
+        }
+    }
+
+    static std::vector<const char*> getRequiredExtensions()
+    {
+        std::uint32_t glfwExtensionCount = 0;
+        const auto** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+        std::vector<const char*> extensions(glfwExtensions, std::next(glfwExtensions, glfwExtensionCount));
+
+        if constexpr (enableValidationLayers)
+        {
+            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        }
+        return extensions;
     }
 
     void createInstance()
     {
+
         // fill an optional struct with application information
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -122,30 +99,64 @@ private:
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appInfo;
 
-        // prepare extensions
-
-        VulkanExtensionSuppportInfo extensionSupportInfo{};
-
+        const auto&& glfwExtensions = getRequiredExtensions();
         // get vulkan extensions required by GLFW
-        std::uint32_t glfwExtensionCount = 0;
-        const auto** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-        // mark extensions requried by glfw
-        const auto allGlfwExtensionsSupported =
-            extensionSupportInfo.mark_glfw_required_extensions(glfwExtensionCount, glfwExtensions);
-
-        spdlog::info("EnabledExtensionCount: {}", glfwExtensionCount);
-        createInfo.enabledExtensionCount = glfwExtensionCount;
-        createInfo.ppEnabledExtensionNames = glfwExtensions;
-        createInfo.enabledLayerCount = 0;
-
-        extensionSupportInfo.log_extension_list();
-
-        if (!allGlfwExtensionsSupported || VK_SUCCESS != vkCreateInstance(&createInfo, nullptr, &instance))
         {
-            spdlog::error("Cannot create vulkan instance!");
-            throw std::runtime_error{"Cannot create vulkan instance!"};
+            // mark extensions requried by glfw
+            const auto glfw_required_extensions =
+                utility::check_glfw_required_extensions(glfwExtensions.size(), glfwExtensions.data());
+
+            spdlog::info("EnabledExtensionCount: {}", glfwExtensions.size());
+            createInfo.enabledExtensionCount = glfwExtensions.size();
+            createInfo.ppEnabledExtensionNames = glfwExtensions.data();
+
+            glfw_required_extensions.log_properties();
+            if (!glfw_required_extensions.all_supported())
+            {
+                throw std::runtime_error(fmt::format("Cannot create vulkan instance! glfw all supported: {}",
+                                                     glfw_required_extensions.all_supported()));
+            }
         }
+
+        const std::vector<const char*> required_validation_layer_names = {"VK_LAYER_KHRONOS_validation"};
+        VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+        // configure validation layers
+        {
+
+            if constexpr (enableValidationLayers)
+            {
+
+                const auto required_validation_layers = utility::check_required_validation_layers(
+                    required_validation_layer_names.size(), required_validation_layer_names.data());
+
+                required_validation_layers.log_properties();
+                if (!required_validation_layers.all_supported())
+
+                {
+                    throw std::runtime_error("validation layers requested, but not available!");
+                }
+                createInfo.enabledLayerCount =
+                    static_cast<std::uint32_t>(required_validation_layer_names.size());
+                createInfo.ppEnabledLayerNames = required_validation_layer_names.data();
+
+                populateDebugMessengerCreateInfo(debugCreateInfo);
+                createInfo.pNext = &debugCreateInfo;
+            }
+            else
+            {
+                createInfo.enabledLayerCount = 0;
+                createInfo.pNext = nullptr;
+            }
+        }
+
+        const auto create_instance_status = vkCreateInstance(&createInfo, nullptr, &instance);
+        if (VK_SUCCESS != create_instance_status)
+        {
+            throw std::runtime_error{
+                fmt::format("Cannot create vulkan instance: {}", create_instance_status)};
+        }
+
+        spdlog::debug("Instance created");
     }
 
     void mainLoop()
@@ -161,23 +172,32 @@ private:
     void cleanup()
     {
         spdlog::info("Cleanup resources");
+
+        if constexpr (enableValidationLayers)
+        {
+            DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+        }
         vkDestroyInstance(instance, nullptr);
         glfwDestroyWindow(window);
         glfwTerminate();
     }
 
     VkInstance instance{nullptr};
+    VkDebugUtilsMessengerEXT debugMessenger{nullptr};
     GLFWwindow* window{nullptr};
 };
 
 int main()
 try
 {
+    spdlog::set_level(spdlog::level::trace);
+
     HelloTrangleApplication{}.run();
 
     return EXIT_SUCCESS;
 }
 catch (const std::exception& e)
 {
+    spdlog::error("{}", e.what());
     return EXIT_FAILURE;
 }
