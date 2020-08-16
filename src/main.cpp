@@ -3,6 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -10,6 +11,7 @@
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <span>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
@@ -24,7 +26,7 @@ const uint32_t HEIGHT = 600;
 class HelloTrangleApplication
 {
 public:
-    void run()
+    auto run()
     {
         initWindow();
         initVulkan();
@@ -49,7 +51,9 @@ private:
         spdlog::info("Initialize Vulkan");
         createInstance();
         setupDebugMessenger();
+        pickPhysicalDevice();
     }
+
     void setupDebugMessenger()
     {
         if constexpr (!enableValidationLayers)
@@ -66,6 +70,120 @@ private:
         {
             throw std::runtime_error("failed to set up debug messenger!");
         }
+    }
+
+    void pickPhysicalDevice()
+    {
+        std::uint32_t deviceCount = 0;
+        vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+        if (0 == deviceCount)
+        {
+            throw std::runtime_error("failed to find GPUs with Vulkan support!");
+        }
+
+        spdlog::debug("Detected {} devices", deviceCount);
+
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+        std::multimap<int, VkPhysicalDevice> candidates{};
+        std::transform(
+            devices.begin(),
+            devices.end(),
+            std::inserter(candidates, candidates.begin()),
+            [](const auto& device) { return std::make_pair(rateDeviceSuitability(device), device); });
+
+        if (candidates.empty())
+        {
+            throw std::runtime_error("failed to find a suitable GPU!");
+        }
+
+        spdlog::debug("Device choosen with score: {}", candidates.rbegin()->first);
+        physicalDevice = candidates.rbegin()->second;
+    }
+
+    struct QueueFaimilyIndices
+    {
+        std::optional<std::uint32_t> graphicsFamily;
+
+        [[nodiscard]] auto isComplete() const -> bool
+        {
+            return graphicsFamily.has_value();
+        }
+    };
+
+    static auto findQueueFamilies(VkPhysicalDevice device)
+    {
+        QueueFaimilyIndices indices{};
+
+        std::uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+        const auto it = std::ranges::find_if(queueFamilies, [](const auto& queueFamily) {
+            return queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT;
+        });
+
+        if (it != queueFamilies.end())
+        {
+            indices.graphicsFamily = std::distance(queueFamilies.begin(), it);
+        }
+
+        return indices;
+    }
+
+    static auto rateDeviceSuitability(const auto& device) -> int
+    {
+        // get device properties
+        VkPhysicalDeviceProperties deviceProperties{};
+        vkGetPhysicalDeviceProperties(device, &deviceProperties);
+        spdlog::debug("Device GPU {} of type: {}, max image dimension 2d: {}",
+                      deviceProperties.deviceName,
+                      deviceProperties.deviceType,
+                      deviceProperties.limits.maxImageDimension2D);
+
+        // get device feature
+        VkPhysicalDeviceFeatures deviceFeatures{};
+        vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+        spdlog::debug("Device GPU {} support geometry shader: {}",
+                      deviceProperties.deviceName,
+                      deviceFeatures.geometryShader);
+
+        // Application can't function without geomtry shaders
+        if (!deviceFeatures.geometryShader)
+        {
+            return 0;
+        }
+
+        const auto queueFamilyIndices = findQueueFamilies(device);
+        spdlog::debug("Device GPU {} support graphics queue: {}",
+                      deviceProperties.deviceName,
+                      queueFamilyIndices.isComplete());
+        if (!queueFamilyIndices.isComplete())
+        {
+            return 0;
+        }
+
+        // -----
+
+        auto score = 0;
+
+        // Discrete GPUs have a significant performance advantage
+        if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        {
+            constexpr auto discrete_gpu_score = 1000;
+            score += discrete_gpu_score;
+        }
+
+        // Maximum possible size of textures affects graphics quality
+        score += deviceProperties.limits.maxImageDimension2D;
+
+        spdlog::debug("Device GPU {} got score: {}", deviceProperties.deviceName, score);
+
+        return score;
     }
 
     static std::vector<const char*> getRequiredExtensions()
@@ -102,23 +220,10 @@ private:
         const auto&& glfwExtensions = getRequiredExtensions();
         // get vulkan extensions required by GLFW
         {
-            // mark extensions requried by glfw
-            const auto glfw_required_extensions =
-                utility::check_glfw_required_extensions(glfwExtensions.size(), glfwExtensions.data());
-
-            spdlog::info("EnabledExtensionCount: {}", glfwExtensions.size());
-            createInfo.enabledExtensionCount = glfwExtensions.size();
-            createInfo.ppEnabledExtensionNames = glfwExtensions.data();
-
-            glfw_required_extensions.log_properties();
-            if (!glfw_required_extensions.all_supported())
-            {
-                throw std::runtime_error(fmt::format("Cannot create vulkan instance! glfw all supported: {}",
-                                                     glfw_required_extensions.all_supported()));
-            }
+            getRequiredByGlfwVulkanExtensions(createInfo, glfwExtensions);
         }
 
-        const std::vector<const char*> required_validation_layer_names = {"VK_LAYER_KHRONOS_validation"};
+        const std::vector<char const*> required_validation_layer_names = {"VK_LAYER_KHRONOS_validation"};
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
         // configure validation layers
         {
@@ -126,26 +231,11 @@ private:
             if constexpr (enableValidationLayers)
             {
 
-                const auto required_validation_layers = utility::check_required_validation_layers(
-                    required_validation_layer_names.size(), required_validation_layer_names.data());
-
-                required_validation_layers.log_properties();
-                if (!required_validation_layers.all_supported())
-
-                {
-                    throw std::runtime_error("validation layers requested, but not available!");
-                }
-                createInfo.enabledLayerCount =
-                    static_cast<std::uint32_t>(required_validation_layer_names.size());
-                createInfo.ppEnabledLayerNames = required_validation_layer_names.data();
-
-                populateDebugMessengerCreateInfo(debugCreateInfo);
-                createInfo.pNext = &debugCreateInfo;
+                configureValidationLayers(createInfo, required_validation_layer_names, debugCreateInfo);
             }
             else
             {
-                createInfo.enabledLayerCount = 0;
-                createInfo.pNext = nullptr;
+                configureValidationLayers(createInfo);
             }
         }
 
@@ -159,7 +249,50 @@ private:
         spdlog::debug("Instance created");
     }
 
-    void mainLoop()
+    auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfwExtensions) -> void
+    {
+        const auto glfw_required_extensions =
+            utility::check_glfw_required_extensions(glfwExtensions.size(), glfwExtensions.data());
+
+        spdlog::info("EnabledExtensionCount: {}", glfwExtensions.size());
+        createInfo.enabledExtensionCount = glfwExtensions.size();
+        createInfo.ppEnabledExtensionNames = glfwExtensions.data();
+
+        glfw_required_extensions.log_properties();
+        if (!glfw_required_extensions.all_supported())
+        {
+            throw std::runtime_error(fmt::format("Cannot create vulkan instance! glfw all supported: {}",
+                                                 glfw_required_extensions.all_supported()));
+        }
+    }
+
+    static auto configureValidationLayers(auto& createInfo,
+                                          const auto& required_validation_layer_names,
+                                          auto& debugCreateInfo) -> void
+    {
+        const auto required_validation_layers = utility::check_required_validation_layers(
+            required_validation_layer_names.size(), required_validation_layer_names.data());
+
+        required_validation_layers.log_properties();
+        if (!required_validation_layers.all_supported())
+
+        {
+            throw std::runtime_error("validation layers requested, but not available!");
+        }
+        createInfo.enabledLayerCount = static_cast<std::uint32_t>(required_validation_layer_names.size());
+        createInfo.ppEnabledLayerNames = required_validation_layer_names.data();
+
+        populateDebugMessengerCreateInfo(debugCreateInfo);
+        createInfo.pNext = &debugCreateInfo;
+    }
+
+    static auto configureValidationLayers(auto& createInfo) -> void
+    {
+        createInfo.enabledLayerCount = 0;
+        createInfo.pNext = nullptr;
+    }
+
+    auto mainLoop() -> void
     {
         spdlog::info("Start loop");
         while (1 != glfwWindowShouldClose(window))
@@ -169,7 +302,7 @@ private:
         spdlog::info("Loop finished");
     }
 
-    void cleanup()
+    auto cleanup() -> void
     {
         spdlog::info("Cleanup resources");
 
@@ -184,6 +317,7 @@ private:
 
     VkInstance instance{nullptr};
     VkDebugUtilsMessengerEXT debugMessenger{nullptr};
+    VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
     GLFWwindow* window{nullptr};
 };
 
