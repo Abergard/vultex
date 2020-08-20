@@ -179,18 +179,16 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
 [[nodiscard]] auto createInstance() -> VkInstance
 {
     // fill an optional struct with application information
-    VkApplicationInfo appInfo{};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Hello vultex!";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "No Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_2;
+    VkApplicationInfo appInfo{.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+                              .pApplicationName = "Hello vultex!",
+                              .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+                              .pEngineName = "No Engine",
+                              .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+                              .apiVersion = VK_API_VERSION_1_2};
 
     // global information about the entire program about extensions etc.
-    VkInstanceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
+    VkInstanceCreateInfo createInfo{.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+                                    .pApplicationInfo = &appInfo};
 
     const auto&& glfwExtensions = getRequiredExtensions();
     // get vulkan extensions required by GLFW
@@ -245,7 +243,7 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
     return debugMessenger;
 }
 
-[[nodiscard]] auto pickPhysicalDevice(const auto* const instance) -> VkPhysicalDevice
+[[nodiscard]] auto pickPhysicalDevice(auto* const instance) -> VkPhysicalDevice
 {
     std::uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -275,14 +273,51 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
     auto* physicalDevice = candidates.rbegin()->second;
     return physicalDevice;
 }
+
+[[nodiscard]] auto createLogicalDevice(const auto physicalDevice) -> VkDevice
+{
+
+    auto indices = findQueueFamilies(physicalDevice);
+
+    float queuePriority = 1.0F;
+    VkDeviceQueueCreateInfo queueCreateInfo{.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                                            .queueFamilyIndex = indices.graphicsFamily.value(),
+                                            .queueCount = 1,
+                                            .pQueuePriorities = &queuePriority};
+
+    VkPhysicalDeviceFeatures deviceFeatures{};
+
+    // For older implementation there is a need to configure validation layers
+    // as like for instance !
+    VkDeviceCreateInfo createInfo{.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+                                  .queueCreateInfoCount = 1,
+                                  .pQueueCreateInfos = &queueCreateInfo,
+                                  .pEnabledFeatures = &deviceFeatures};
+
+    VkDevice logicalDevice{nullptr};
+    if (VK_SUCCESS != vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice))
+    {
+        throw std::runtime_error("Failed to create logical device!");
+    }
+
+    return logicalDevice;
+}
 } // namespace
 
 class HelloTrangleApplication
 {
 public:
     HelloTrangleApplication()
-        : window{initWindow()}, instance{createInstance()}, debugMessenger{setupDebugMessenger(instance)}
+        : window{initWindow()},
+          instance{createInstance()},
+          debugMessenger{setupDebugMessenger(instance)},
+          physicalDevice{pickPhysicalDevice(instance)},
+          logicalDevice{createLogicalDevice(physicalDevice)}
     {
+        const auto indices = findQueueFamilies(physicalDevice);
+        constexpr auto firstQueueIndex = 0;
+
+        vkGetDeviceQueue(logicalDevice, indices.graphicsFamily.value(), firstQueueIndex, &graphicsQueue);
     }
 
     HelloTrangleApplication(const HelloTrangleApplication&) = delete;
@@ -293,6 +328,8 @@ public:
     ~HelloTrangleApplication()
     {
         spdlog::info("Cleanup resources");
+
+        vkDestroyDevice(logicalDevice, nullptr);
 
         if constexpr (enableValidationLayers)
         {
@@ -319,6 +356,8 @@ private:
     VkInstance instance{nullptr};
     VkDebugUtilsMessengerEXT debugMessenger{nullptr};
     VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
+    VkDevice logicalDevice{nullptr};
+    VkQueue graphicsQueue{nullptr};
 };
 
 int main()
