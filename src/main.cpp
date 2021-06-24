@@ -56,9 +56,10 @@ struct QueueFaimilyIndices
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-    const auto it = std::ranges::find_if(queueFamilies, [](const auto& queueFamily) {
-        return queueFamily.queueFlags & static_cast<std::uint32_t>(VK_QUEUE_GRAPHICS_BIT);
-    });
+    const auto it = std::ranges::find_if(
+        queueFamilies,
+        [](const auto& queueFamily)
+        { return queueFamily.queueFlags & static_cast<std::uint32_t>(VK_QUEUE_GRAPHICS_BIT); });
 
     if (it != queueFamilies.end())
     {

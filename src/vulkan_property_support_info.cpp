@@ -67,7 +67,8 @@ RequiredVulkanProperties check_glfw_required_extensions(const std::uint32_t coun
     SupportMap properties{};
     for (const auto& extension : extension_properties)
     {
-        // the use of span is not needed here, however it is done to silent a warning about array decay
+        // the use of span is not needed here, however it is done to silent a
+        // warning about array decay
         properties[std::span<const char>{extension.extensionName}.data()] = 1;
     }
     return RequiredVulkanProperties("Extensions", std::move(properties), count, names);
@@ -84,7 +85,8 @@ RequiredVulkanProperties check_required_validation_layers(const std::uint32_t co
     SupportMap properties{};
     for (const auto& layer : availableLayers)
     {
-        // the use of span is not needed here, however it is done to silent a warning about array decay
+        // the use of span is not needed here, however it is done to silent a
+        // warning about array decay
         properties[std::span<const char>{layer.layerName}.data()] = 1;
     }
     return RequiredVulkanProperties("Layers", std::move(properties), count, names);
