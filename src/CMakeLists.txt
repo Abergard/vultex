@@ -15,6 +15,6 @@ find_package(spdlog REQUIRED)
 target_link_libraries(vultex-exe
   PRIVATE 
   fmt::fmt-header-only spdlog::spdlog_header_only
-  glfw glm Vulkan::Vulkan)
+  glfw glm::glm Vulkan::Vulkan)
 
 # set_property(TARGET vultex-exe PROPERTY CXX_STANDARD 20)

@@ -260,8 +260,7 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
     std::multimap<int, VkPhysicalDevice> candidates{};
-    std::transform(devices.begin(),
-                   devices.end(),
+    std::ranges::transform(devices,
                    std::inserter(candidates, candidates.begin()),
                    [](const auto& device) { return std::make_pair(rateDeviceSuitability(device), device); });
 
