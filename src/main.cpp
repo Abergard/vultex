@@ -191,7 +191,7 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
     VkInstanceCreateInfo createInfo{.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
                                     .pApplicationInfo = &appInfo};
 
-    const auto&& glfwExtensions = getRequiredExtensions();
+    const auto glfwExtensions = getRequiredExtensions();
     // get vulkan extensions required by GLFW
     {
         getRequiredByGlfwVulkanExtensions(createInfo, glfwExtensions);
@@ -261,10 +261,11 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
 
     std::multimap<int, VkPhysicalDevice> candidates{};
     std::ranges::transform(devices,
-                   std::inserter(candidates, candidates.begin()),
-                   [](const auto& device) { return std::make_pair(rateDeviceSuitability(device), device); });
+                           std::inserter(candidates, candidates.begin()),
+                           [](const auto& device)
+                           { return std::make_pair(rateDeviceSuitability(device), device); });
 
-    if (candidates.empty())
+    if (candidates.empty()) // TODO(Abergard): or score == 0
     {
         throw std::runtime_error("failed to find a suitable GPU!");
     }
@@ -360,8 +361,7 @@ private:
     VkQueue graphicsQueue{nullptr};
 };
 
-int main()
-try
+int main() try
 {
     spdlog::set_level(spdlog::level::trace);
 

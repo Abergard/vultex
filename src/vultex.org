@@ -1,0 +1,18 @@
+# Vultex main file
+HelloTrangleApplication
+ -> run function do nothing more than poll event and close window
+ -> currently it just create resources at the startup and cleanp at the end
+
+## Construction order
+ -> GLFW window - just a GLFW window
+ 
+ -> VK instance - VK instance. Just an main application handler. Setups vk and api version, app name and version.
+ Chekcs required (by glfw and our chose) extensions. Creates struct with extension list.
+ Mark chosen and required extension. It helps to show which extension is not supported.
+ It also configure a Debug Layers
+ 
+ -> debug messenger
+ 
+ -> physical devices - get list of graphics card, assign them a score and chose the best one.
+ 
+ -> logical device - baset on chosen graphics card create a logical vk device
