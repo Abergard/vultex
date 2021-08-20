@@ -265,9 +265,13 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
                            [](const auto& device)
                            { return std::make_pair(rateDeviceSuitability(device), device); });
 
-    if (candidates.empty()) // TODO(Abergard): or score == 0
+    if (candidates.empty())
     {
-        throw std::runtime_error("failed to find a suitable GPU!");
+        throw std::runtime_error("Cannot found any GPU device!");
+    }
+    if (candidates.rbegin()->first == 0)
+    {
+        throw std::runtime_error("Cannot found any suitable GPU!");
     }
 
     spdlog::debug("Device choosen with score: {}", candidates.rbegin()->first);
