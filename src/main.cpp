@@ -74,17 +74,17 @@ struct QueueFaimilyIndices
     // get device properties
     VkPhysicalDeviceProperties deviceProperties{};
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
-    spdlog::debug("Device GPU {} of type: {}, max image dimension 2d: {}",
-                  deviceProperties.deviceName,
-                  deviceProperties.deviceType,
-                  deviceProperties.limits.maxImageDimension2D);
+    spdlog::info("Device GPU {} of type: {}, max image dimension 2d: {}",
+                 deviceProperties.deviceName,
+                 deviceProperties.deviceType,
+                 deviceProperties.limits.maxImageDimension2D);
 
     // get device feature
     VkPhysicalDeviceFeatures deviceFeatures{};
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-    spdlog::debug("Device GPU {} support geometry shader: {}",
-                  deviceProperties.deviceName,
-                  deviceFeatures.geometryShader);
+    spdlog::info("Device GPU {} support geometry shader: {}",
+                 deviceProperties.deviceName,
+                 deviceFeatures.geometryShader);
 
     // Application can't function without geomtry shaders
     if (!deviceFeatures.geometryShader)
@@ -93,9 +93,9 @@ struct QueueFaimilyIndices
     }
 
     const auto queueFamilyIndices = findQueueFamilies(device);
-    spdlog::debug("Device GPU {} support graphics queue: {}",
-                  deviceProperties.deviceName,
-                  queueFamilyIndices.isComplete());
+    spdlog::info("Device GPU {} support graphics queue: {}",
+                 deviceProperties.deviceName,
+                 queueFamilyIndices.isComplete());
     if (!queueFamilyIndices.isComplete())
     {
         return 0;
@@ -115,7 +115,7 @@ struct QueueFaimilyIndices
     // Maximum possible size of textures affects graphics quality
     score += deviceProperties.limits.maxImageDimension2D;
 
-    spdlog::debug("Device GPU {} got score: {}", deviceProperties.deviceName, score);
+    spdlog::info("Device GPU {} got score: {}", deviceProperties.deviceName, score);
 
     return score;
 }
@@ -220,7 +220,7 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
         throw std::runtime_error{fmt::format("Cannot create vulkan instance: {}", create_instance_status)};
     }
 
-    spdlog::debug("Instance created");
+    spdlog::info("Instance created");
     return instance;
 }
 
@@ -254,7 +254,7 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
         throw std::runtime_error("failed to find GPUs with Vulkan support!");
     }
 
-    spdlog::debug("Detected {} devices", deviceCount);
+    spdlog::info("Detected {} devices", deviceCount);
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
@@ -274,7 +274,7 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
         throw std::runtime_error("Cannot found any suitable GPU!");
     }
 
-    spdlog::debug("Device choosen with score: {}", candidates.rbegin()->first);
+    spdlog::info("Device choosen with score: {}", candidates.rbegin()->first);
     auto* physicalDevice = candidates.rbegin()->second;
     return physicalDevice;
 }
@@ -365,9 +365,10 @@ private:
     VkQueue graphicsQueue{nullptr};
 };
 
-int main() try
+int main()
+try
 {
-    spdlog::set_level(spdlog::level::trace);
+    spdlog::set_level(spdlog::level::info);
 
     HelloTrangleApplication{}.run();
 

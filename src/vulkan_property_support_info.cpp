@@ -17,11 +17,11 @@ const char* get_icon(const int id)
     switch (id)
     {
     case -1:
-        return " ! ";
+        return " ! "; // required but not detected
     case 0:
-        return "[x]";
+        return "[x]"; // required and supported
     case 1:
-        return "[ ]";
+        return "[ ]"; // not required but supported
     default:
         return " ? ";
     }
