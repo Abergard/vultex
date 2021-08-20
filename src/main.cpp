@@ -147,17 +147,11 @@ auto configureValidationLayers(auto& createInfo,
     {
         throw std::runtime_error("validation layers requested, but not available!");
     }
-    createInfo.enabledLayerCount = static_cast<std::uint32_t>(required_validation_layer_names.size());
+    createInfo.enabledLayerCount = required_validation_layer_names.size();
     createInfo.ppEnabledLayerNames = required_validation_layer_names.data();
 
     populateDebugMessengerCreateInfo(debugCreateInfo);
     createInfo.pNext = &debugCreateInfo;
-}
-
-auto configureValidationLayers(auto& createInfo) -> void
-{
-    createInfo.enabledLayerCount = 0;
-    createInfo.pNext = nullptr;
 }
 
 static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfwExtensions) -> void
@@ -192,24 +186,18 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
                                     .pApplicationInfo = &appInfo};
 
     const auto glfwExtensions = getRequiredExtensions();
-    // get vulkan extensions required by GLFW
-    {
+
+    { // get vulkan extensions required by GLFW
         getRequiredByGlfwVulkanExtensions(createInfo, glfwExtensions);
     }
 
     const std::vector<char const*> required_validation_layer_names = {"VK_LAYER_KHRONOS_validation"};
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-    // configure validation layers
-    {
 
+    { // configure validation layers
         if constexpr (enableValidationLayers)
         {
-
             configureValidationLayers(createInfo, required_validation_layer_names, debugCreateInfo);
-        }
-        else
-        {
-            configureValidationLayers(createInfo);
         }
     }
 

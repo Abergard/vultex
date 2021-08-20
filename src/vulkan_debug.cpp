@@ -76,8 +76,11 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
     const auto message = fmt::format("VK [{}] {}", getDebugMessageType(messageType), pCallbackData->pMessage);
     switch (messageSeverity)
     {
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        spdlog::info(message);
+        break;
+
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
         spdlog::debug(message);
         break;
 
