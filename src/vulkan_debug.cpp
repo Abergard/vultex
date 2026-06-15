@@ -1,7 +1,7 @@
 #include "vulkan_debug.hpp"
 
 #include <exception>
-#include <fmt/format.h>
+#include <format>
 #include <spdlog/spdlog.h>
 
 void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
@@ -73,7 +73,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
                                                     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                                                     void* /*pUserData*/)
 {
-    const auto message = fmt::format("VK [{}] {}", getDebugMessageType(messageType), pCallbackData->pMessage);
+    const auto message = std::format("VK [{}] {}", getDebugMessageType(messageType), pCallbackData->pMessage);
     switch (messageSeverity)
     {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:

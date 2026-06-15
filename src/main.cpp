@@ -1,40 +1,23 @@
 // https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Base_code
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
-#include <fmt/format.h>
-#include <iostream>
+#include <format>
 #include <iterator>
 #include <map>
 #include <optional>
-#include <span>
+#include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
-#include <string_view>
 
 #include "vulkan_debug.hpp"
 #include "vulkan_property_support_info.hpp"
+#include "window.hpp"
 
 namespace
 {
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600;
-
-[[nodiscard]] auto initWindow() -> GLFWwindow*
-{
-    spdlog::info("Initialize window");
-
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-    return glfwCreateWindow(WIDTH, HEIGHT, "Vultex", nullptr, nullptr);
-}
 
 struct QueueFaimilyIndices
 {
@@ -56,14 +39,14 @@ struct QueueFaimilyIndices
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-    const auto it = std::ranges::find_if(
+    const auto queueIt = std::ranges::find_if(
         queueFamilies,
         [](const auto& queueFamily)
         { return queueFamily.queueFlags & static_cast<std::uint32_t>(VK_QUEUE_GRAPHICS_BIT); });
 
-    if (it != queueFamilies.end())
+    if (queueIt != queueFamilies.end())
     {
-        indices.graphicsFamily = std::distance(queueFamilies.begin(), it);
+        indices.graphicsFamily = std::distance(queueFamilies.begin(), queueIt);
     }
 
     return indices;
@@ -76,7 +59,7 @@ struct QueueFaimilyIndices
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
     spdlog::info("Device GPU {} of type: {}, max image dimension 2d: {}",
                  deviceProperties.deviceName,
-                 deviceProperties.deviceType,
+                 static_cast<int>(deviceProperties.deviceType),
                  deviceProperties.limits.maxImageDimension2D);
 
     // get device feature
@@ -113,25 +96,11 @@ struct QueueFaimilyIndices
     }
 
     // Maximum possible size of textures affects graphics quality
-    score += deviceProperties.limits.maxImageDimension2D;
+    score += static_cast<int>(deviceProperties.limits.maxImageDimension2D);
 
     spdlog::info("Device GPU {} got score: {}", deviceProperties.deviceName, score);
 
     return score;
-}
-
-[[nodiscard]] auto getRequiredExtensions() -> std::vector<const char*>
-{
-    std::uint32_t glfwExtensionCount = 0;
-    const auto** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    std::vector<const char*> extensions(glfwExtensions, std::next(glfwExtensions, glfwExtensionCount));
-
-    if constexpr (enableValidationLayers)
-    {
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-    return extensions;
 }
 
 auto configureValidationLayers(auto& createInfo,
@@ -154,20 +123,20 @@ auto configureValidationLayers(auto& createInfo,
     createInfo.pNext = &debugCreateInfo;
 }
 
-static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfwExtensions) -> void
+auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> void
 {
-    const auto glfw_required_extensions =
-        utility::check_glfw_required_extensions(glfwExtensions.size(), glfwExtensions.data());
+    const auto window_required_extensions =
+        utility::check_required_extensions(windowExtensions.size(), windowExtensions.data());
 
-    spdlog::info("EnabledExtensionCount: {}", glfwExtensions.size());
-    createInfo.enabledExtensionCount = glfwExtensions.size();
-    createInfo.ppEnabledExtensionNames = glfwExtensions.data();
+    spdlog::info("EnabledExtensionCount: {}", windowExtensions.size());
+    createInfo.enabledExtensionCount = windowExtensions.size();
+    createInfo.ppEnabledExtensionNames = windowExtensions.data();
 
-    glfw_required_extensions.log_properties();
-    if (!glfw_required_extensions.all_supported())
+    window_required_extensions.log_properties();
+    if (!window_required_extensions.all_supported())
     {
-        throw std::runtime_error(fmt::format("Cannot create vulkan instance! glfw all supported: {}",
-                                             glfw_required_extensions.all_supported()));
+        throw std::runtime_error(std::format("Cannot create vulkan instance! window all supported: {}",
+                                             window_required_extensions.all_supported()));
     }
 }
 
@@ -185,10 +154,10 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
     VkInstanceCreateInfo createInfo{.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
                                     .pApplicationInfo = &appInfo};
 
-    const auto glfwExtensions = getRequiredExtensions();
+    const auto windowExtensions = ui::Window::getRequiredExtensions(ui::GraphicsLibrary::Vulkan);
 
-    { // get vulkan extensions required by GLFW
-        getRequiredByGlfwVulkanExtensions(createInfo, glfwExtensions);
+    { // setup required extensions
+        getRequiredExtensions(createInfo, windowExtensions);
     }
 
     const std::vector<char const*> required_validation_layer_names = {"VK_LAYER_KHRONOS_validation"};
@@ -205,7 +174,8 @@ static auto getRequiredByGlfwVulkanExtensions(auto& createInfo, const auto& glfw
     const auto create_instance_status = vkCreateInstance(&createInfo, nullptr, &instance);
     if (VK_SUCCESS != create_instance_status)
     {
-        throw std::runtime_error{fmt::format("Cannot create vulkan instance: {}", create_instance_status)};
+        throw std::runtime_error{
+            std::format("Cannot create vulkan instance: {}", static_cast<int>(create_instance_status))};
     }
 
     spdlog::info("Instance created");
@@ -301,8 +271,7 @@ class HelloTrangleApplication
 {
 public:
     HelloTrangleApplication()
-        : window{initWindow()},
-          instance{createInstance()},
+        : instance{createInstance()},
           debugMessenger{setupDebugMessenger(instance)},
           physicalDevice{pickPhysicalDevice(instance)},
           logicalDevice{createLogicalDevice(physicalDevice)}
@@ -330,22 +299,15 @@ public:
         }
 
         vkDestroyInstance(instance, nullptr);
-        glfwDestroyWindow(window);
-        glfwTerminate();
     }
 
     auto run()
     {
-        spdlog::info("Start loop");
-        while (1 != glfwWindowShouldClose(window))
-        {
-            glfwPollEvents();
-        }
-        spdlog::info("Loop finished");
+        window.loop();
     }
 
 private:
-    GLFWwindow* window{nullptr};
+    ui::Window window;
     VkInstance instance{nullptr};
     VkDebugUtilsMessengerEXT debugMessenger{nullptr};
     VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
@@ -356,6 +318,11 @@ private:
 int main()
 try
 {
+    // Forcing always coloring, because it doesn't work in some environments, e.g. Emacs shell in Windows
+    auto sink = std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>();
+    sink->set_color_mode(spdlog::color_mode::always);
+    auto logger = std::make_shared<spdlog::logger>("vultex", sink);
+    spdlog::set_default_logger(logger);
     spdlog::set_level(spdlog::level::info);
 
     HelloTrangleApplication{}.run();

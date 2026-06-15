@@ -1,12 +1,10 @@
 #include "vulkan_property_support_info.hpp"
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #include <iterator>
 #include <span>
 #include <spdlog/spdlog.h>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace utility
 {
@@ -56,7 +54,7 @@ bool RequiredVulkanProperties::all_supported() const
     return all_required_extensions_supported;
 }
 
-RequiredVulkanProperties check_glfw_required_extensions(const std::uint32_t count, const char* const* names)
+RequiredVulkanProperties check_required_extensions(const std::uint32_t count, const char* const* names)
 {
     std::uint32_t extensionCount{0};
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -71,7 +69,7 @@ RequiredVulkanProperties check_glfw_required_extensions(const std::uint32_t coun
         // warning about array decay
         properties[std::span<const char>{extension.extensionName}.data()] = 1;
     }
-    return RequiredVulkanProperties("Extensions", std::move(properties), count, names);
+    return {"Extensions", std::move(properties), count, names};
 }
 
 RequiredVulkanProperties check_required_validation_layers(const std::uint32_t count, const char* const* names)
@@ -89,6 +87,6 @@ RequiredVulkanProperties check_required_validation_layers(const std::uint32_t co
         // warning about array decay
         properties[std::span<const char>{layer.layerName}.data()] = 1;
     }
-    return RequiredVulkanProperties("Layers", std::move(properties), count, names);
+    return {"Layers", std::move(properties), count, names};
 }
 } // namespace utility

@@ -1,0 +1,72 @@
+#include "window.hpp"
+
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+#include <spdlog/spdlog.h>
+
+#include "vulkan_debug.hpp"
+
+namespace ui
+{
+const uint32_t WIDTH = 800;
+const uint32_t HEIGHT = 600;
+
+namespace
+{
+GLFWwindow* createGlfwWindow()
+{
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+    return glfwCreateWindow(WIDTH, HEIGHT, "Vultex", nullptr, nullptr);
+}
+} // namespace
+
+Window::Window() : window{createGlfwWindow()}
+{
+    spdlog::info("Initialize window");
+}
+
+Window::~Window()
+{
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
+
+void Window::loop()
+{
+    spdlog::info("Start loop");
+    while (1 != glfwWindowShouldClose(window))
+    {
+        glfwPollEvents();
+    }
+    spdlog::info("Loop finished");
+}
+
+[[nodiscard]] auto Window::getRequiredExtensions(const GraphicsLibrary library) -> std::vector<const char*>
+{
+    switch (library)
+    {
+    case GraphicsLibrary::DirectX:
+        [[fallthrough]];
+    case GraphicsLibrary::OpenGL:
+        spdlog::warn("Graphics library {} is not supported yet, fallback to Vulkan",
+                     static_cast<char>(library));
+        [[fallthrough]];
+    case GraphicsLibrary::Vulkan:
+        break;
+    }
+
+    std::uint32_t glfwExtensionCount = 0;
+    const auto** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+    std::vector<const char*> extensions(glfwExtensions, std::next(glfwExtensions, glfwExtensionCount));
+
+    if constexpr (enableValidationLayers)
+    {
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
+    return extensions;
+}
+} // namespace ui

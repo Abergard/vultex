@@ -24,6 +24,6 @@ private:
     bool all_required_extensions_supported{true};
 };
 
-RequiredVulkanProperties check_glfw_required_extensions(std::uint32_t count, const char* const* names);
+RequiredVulkanProperties check_required_extensions(std::uint32_t count, const char* const* names);
 RequiredVulkanProperties check_required_validation_layers(std::uint32_t count, const char* const* names);
 } // namespace utility
