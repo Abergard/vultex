@@ -8,10 +8,9 @@
 #include <iterator>
 #include <map>
 #include <optional>
-#include <spdlog/sinks/ansicolor_sink.h>
-#include <spdlog/spdlog.h>
 #include <stdexcept>
 
+#include "logger.hpp"
 #include "vulkan_debug.hpp"
 #include "vulkan_property_support_info.hpp"
 #include "window.hpp"
@@ -29,6 +28,7 @@ struct QueueFaimilyIndices
     }
 };
 
+// 3 times, need to refactor
 [[nodiscard]] auto findQueueFamilies(VkPhysicalDevice device) -> QueueFaimilyIndices
 {
     QueueFaimilyIndices indices{};
@@ -57,17 +57,17 @@ struct QueueFaimilyIndices
     // get device properties
     VkPhysicalDeviceProperties deviceProperties{};
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
-    spdlog::info("Device GPU {} of type: {}, max image dimension 2d: {}",
-                 deviceProperties.deviceName,
-                 static_cast<int>(deviceProperties.deviceType),
-                 deviceProperties.limits.maxImageDimension2D);
+    log::info("Device GPU {} of type: {}, max image dimension 2d: {}",
+              deviceProperties.deviceName,
+              static_cast<int>(deviceProperties.deviceType),
+              deviceProperties.limits.maxImageDimension2D);
 
     // get device feature
     VkPhysicalDeviceFeatures deviceFeatures{};
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-    spdlog::info("Device GPU {} support geometry shader: {}",
-                 deviceProperties.deviceName,
-                 deviceFeatures.geometryShader);
+    log::info("Device GPU {} support geometry shader: {}",
+              deviceProperties.deviceName,
+              deviceFeatures.geometryShader);
 
     // Application can't function without geomtry shaders
     if (!deviceFeatures.geometryShader)
@@ -76,9 +76,9 @@ struct QueueFaimilyIndices
     }
 
     const auto queueFamilyIndices = findQueueFamilies(device);
-    spdlog::info("Device GPU {} support graphics queue: {}",
-                 deviceProperties.deviceName,
-                 queueFamilyIndices.isComplete());
+    log::info("Device GPU {} support graphics queue: {}",
+              deviceProperties.deviceName,
+              queueFamilyIndices.isComplete());
     if (!queueFamilyIndices.isComplete())
     {
         return 0;
@@ -98,7 +98,7 @@ struct QueueFaimilyIndices
     // Maximum possible size of textures affects graphics quality
     score += static_cast<int>(deviceProperties.limits.maxImageDimension2D);
 
-    spdlog::info("Device GPU {} got score: {}", deviceProperties.deviceName, score);
+    log::info("Device GPU {} got score: {}", deviceProperties.deviceName, score);
 
     return score;
 }
@@ -128,7 +128,7 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
     const auto window_required_extensions =
         utility::check_required_extensions(windowExtensions.size(), windowExtensions.data());
 
-    spdlog::info("EnabledExtensionCount: {}", windowExtensions.size());
+    log::info("EnabledExtensionCount: {}", windowExtensions.size());
     createInfo.enabledExtensionCount = windowExtensions.size();
     createInfo.ppEnabledExtensionNames = windowExtensions.data();
 
@@ -178,7 +178,7 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
             std::format("Cannot create vulkan instance: {}", static_cast<int>(create_instance_status))};
     }
 
-    spdlog::info("Instance created");
+    log::info("Instance created");
     return instance;
 }
 
@@ -189,7 +189,7 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
         return nullptr;
     }
 
-    spdlog::info("Initialize debug messenger");
+    log::info("Initialize debug messenger");
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
     populateDebugMessengerCreateInfo(createInfo);
@@ -212,7 +212,7 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
         throw std::runtime_error("failed to find GPUs with Vulkan support!");
     }
 
-    spdlog::info("Detected {} devices", deviceCount);
+    log::info("Detected {} devices", deviceCount);
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
@@ -232,7 +232,7 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
         throw std::runtime_error("Cannot found any suitable GPU!");
     }
 
-    spdlog::info("Device choosen with score: {}", candidates.rbegin()->first);
+    log::info("Device choosen with score: {}", candidates.rbegin()->first);
     auto* physicalDevice = candidates.rbegin()->second;
     return physicalDevice;
 }
@@ -289,7 +289,7 @@ public:
 
     ~HelloTrangleApplication()
     {
-        spdlog::info("Cleanup resources");
+        log::info("Cleanup resources");
 
         vkDestroyDevice(logicalDevice, nullptr);
 
@@ -318,12 +318,7 @@ private:
 int main()
 try
 {
-    // Forcing always coloring, because it doesn't work in some environments, e.g. Emacs shell in Windows
-    auto sink = std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>();
-    sink->set_color_mode(spdlog::color_mode::always);
-    auto logger = std::make_shared<spdlog::logger>("vultex", sink);
-    spdlog::set_default_logger(logger);
-    spdlog::set_level(spdlog::level::info);
+    logger::initSpdlog();
 
     HelloTrangleApplication{}.run();
 
@@ -331,6 +326,6 @@ try
 }
 catch (const std::exception& e)
 {
-    spdlog::error("{}", e.what());
+    log::error("{}", e.what());
     return EXIT_FAILURE;
 }

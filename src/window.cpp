@@ -2,9 +2,10 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <spdlog/spdlog.h>
 
+#include "logger.hpp"
 #include "vulkan_debug.hpp"
+
 
 namespace ui
 {
@@ -25,7 +26,7 @@ GLFWwindow* createGlfwWindow()
 
 Window::Window() : window{createGlfwWindow()}
 {
-    spdlog::info("Initialize window");
+    log::info("Initialize window");
 }
 
 Window::~Window()
@@ -36,12 +37,12 @@ Window::~Window()
 
 void Window::loop()
 {
-    spdlog::info("Start loop");
+    log::info("Start loop");
     while (1 != glfwWindowShouldClose(window))
     {
         glfwPollEvents();
     }
-    spdlog::info("Loop finished");
+    log::info("Loop finished");
 }
 
 [[nodiscard]] auto Window::getRequiredExtensions(const GraphicsLibrary library) -> std::vector<const char*>
@@ -51,10 +52,11 @@ void Window::loop()
     case GraphicsLibrary::DirectX:
         [[fallthrough]];
     case GraphicsLibrary::OpenGL:
-        spdlog::warn("Graphics library {} is not supported yet, fallback to Vulkan",
+        log::warn("Graphics library {} is not supported yet, fallback to Vulkan",
                      static_cast<char>(library));
         [[fallthrough]];
     case GraphicsLibrary::Vulkan:
+        log::info("Using Vulkan graphics library");
         break;
     }
 

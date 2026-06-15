@@ -2,7 +2,8 @@
 
 #include <exception>
 #include <format>
-#include <spdlog/spdlog.h>
+
+#include "logger.hpp"
 
 void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {
@@ -30,7 +31,7 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
 
     if (nullptr == func)
     {
-        spdlog::error("Couldn't find vkCreateDebugUtilsMessengerEXT");
+        log::error("Couldn't find vkCreateDebugUtilsMessengerEXT");
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
@@ -46,7 +47,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
 
     if (nullptr == func)
     {
-        spdlog::error("Couldn't find vkDestroyDebugUtilsMessengerEXT");
+        log::error("Couldn't find vkDestroyDebugUtilsMessengerEXT");
         return;
     }
 
@@ -77,19 +78,19 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
     switch (messageSeverity)
     {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        spdlog::info(message);
+        log::info(message);
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        spdlog::debug(message);
+        log::debug(message);
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        spdlog::warn(message);
+        log::warn(message);
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        spdlog::error(message);
+        log::error(message);
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:

@@ -10,7 +10,8 @@ target_sources(vultex
   main.cpp
   window.cpp
   vulkan_debug.cpp
-  vulkan_property_support_info.cpp)
+  vulkan_property_support_info.cpp
+  logger.cpp)
 
 
 target_link_libraries(vultex

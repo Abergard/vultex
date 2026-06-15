@@ -2,9 +2,10 @@
 
 #include <iterator>
 #include <span>
-#include <spdlog/spdlog.h>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#include "logger.hpp"
 
 namespace utility
 {
@@ -28,10 +29,10 @@ const char* get_icon(const int id)
 
 void RequiredVulkanProperties::log_properties() const
 {
-    spdlog::info("{} status:", property_type_name);
+    log::info("{} status:", property_type_name);
     for (const auto& [name, id] : extensions)
     {
-        spdlog::info("\t {} {}", get_icon(id), name);
+        log::info("\t {} {}", get_icon(id), name);
     }
 }
 
