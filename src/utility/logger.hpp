@@ -3,7 +3,7 @@
 #include <spdlog/spdlog.h>
 
 namespace log = spdlog;
-namespace logger 
+namespace utility
 {
 void initSpdlog();
-} // namespace logger
+} // namespace utility

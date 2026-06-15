@@ -1,9 +1,8 @@
 #include "vulkan/debug.hpp"
 
-#include <exception>
 #include <format>
 
-#include "logger.hpp"
+#include "utility/logger.hpp"
 
 namespace vk
 {

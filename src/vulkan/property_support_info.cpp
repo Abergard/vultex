@@ -5,9 +5,9 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#include "logger.hpp"
+#include "utility/logger.hpp"
 
-namespace vk 
+namespace vk
 {
 namespace
 {
@@ -90,4 +90,4 @@ RequiredVulkanProperties check_required_validation_layers(const std::uint32_t co
     }
     return {"Layers", std::move(properties), count, names};
 }
-} // namespace utility
+} // namespace vk

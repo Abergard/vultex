@@ -2,7 +2,7 @@
 
 #include <spdlog/sinks/ansicolor_sink.h>
 
-namespace logger 
+namespace utility
 {
 void initSpdlog()
 {
@@ -13,4 +13,4 @@ void initSpdlog()
     spdlog::set_default_logger(logger);
     spdlog::set_level(spdlog::level::info);
 }
-} // namespace logger
+} // namespace utility

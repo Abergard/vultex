@@ -3,9 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "logger.hpp"
-#include "vulkan/debug.hpp"
-
+#include "utility/logger.hpp"
 
 namespace ui
 {
@@ -52,8 +50,7 @@ void Window::loop()
     case GraphicsLibrary::DirectX:
         [[fallthrough]];
     case GraphicsLibrary::OpenGL:
-        log::warn("Graphics library {} is not supported yet, fallback to Vulkan",
-                     static_cast<char>(library));
+        log::warn("Graphics library {} is not supported yet, fallback to Vulkan", static_cast<char>(library));
         [[fallthrough]];
     case GraphicsLibrary::Vulkan:
         log::info("Using Vulkan graphics library");
@@ -63,12 +60,6 @@ void Window::loop()
     std::uint32_t glfwExtensionCount = 0;
     const auto** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-    std::vector<const char*> extensions(glfwExtensions, std::next(glfwExtensions, glfwExtensionCount));
-
-    if constexpr (enableValidationLayers)
-    {
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-    return extensions;
+    return {glfwExtensions, std::next(glfwExtensions, glfwExtensionCount)};
 }
 } // namespace ui

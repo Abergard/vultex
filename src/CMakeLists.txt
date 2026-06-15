@@ -8,10 +8,14 @@ add_executable(vultex)
 target_sources(vultex
   PRIVATE
   main.cpp
-  window.cpp
+  ########## VULKAN SOURCES ###########
   vulkan/debug.cpp
   vulkan/property_support_info.cpp
-  logger.cpp)
+  vulkan/vulkan.cpp
+  ########### UI SOURCES ##############
+  ui/window.cpp
+  ########### UTILITY SOURCES #########
+  utility/logger.cpp)
 
 target_include_directories(vultex
   PRIVATE
