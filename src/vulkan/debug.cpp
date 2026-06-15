@@ -1,9 +1,12 @@
-#include "vulkan_debug.hpp"
+#include "vulkan/debug.hpp"
 
 #include <exception>
 #include <format>
 
 #include "logger.hpp"
+
+namespace vk
+{
 
 void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {
@@ -98,3 +101,4 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
     }
     return VK_FALSE;
 }
+} // namespace vk

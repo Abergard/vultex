@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "logger.hpp"
-#include "vulkan_debug.hpp"
+#include "vulkan/debug.hpp"
 
 
 namespace ui

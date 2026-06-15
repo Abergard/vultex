@@ -11,8 +11,8 @@
 #include <stdexcept>
 
 #include "logger.hpp"
-#include "vulkan_debug.hpp"
-#include "vulkan_property_support_info.hpp"
+#include "vulkan/debug.hpp"
+#include "vulkan/property_support_info.hpp"
 #include "window.hpp"
 
 namespace
@@ -107,7 +107,7 @@ auto configureValidationLayers(auto& createInfo,
                                const auto& required_validation_layer_names,
                                auto& debugCreateInfo) -> void
 {
-    const auto required_validation_layers = utility::check_required_validation_layers(
+    const auto required_validation_layers = vk::check_required_validation_layers(
         required_validation_layer_names.size(), required_validation_layer_names.data());
 
     required_validation_layers.log_properties();
@@ -119,14 +119,14 @@ auto configureValidationLayers(auto& createInfo,
     createInfo.enabledLayerCount = required_validation_layer_names.size();
     createInfo.ppEnabledLayerNames = required_validation_layer_names.data();
 
-    populateDebugMessengerCreateInfo(debugCreateInfo);
+    vk::populateDebugMessengerCreateInfo(debugCreateInfo);
     createInfo.pNext = &debugCreateInfo;
 }
 
 auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> void
 {
     const auto window_required_extensions =
-        utility::check_required_extensions(windowExtensions.size(), windowExtensions.data());
+        vk::check_required_extensions(windowExtensions.size(), windowExtensions.data());
 
     log::info("EnabledExtensionCount: {}", windowExtensions.size());
     createInfo.enabledExtensionCount = windowExtensions.size();
@@ -140,7 +140,7 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
     }
 }
 
-[[nodiscard]] auto createInstance() -> VkInstance
+[[nodiscard]] auto createVulkanInstance() -> VkInstance
 {
     // fill an optional struct with application information
     VkApplicationInfo appInfo{.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -192,10 +192,10 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
     log::info("Initialize debug messenger");
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
-    populateDebugMessengerCreateInfo(createInfo);
+    vk::populateDebugMessengerCreateInfo(createInfo);
 
     VkDebugUtilsMessengerEXT debugMessenger{nullptr};
-    if (VK_SUCCESS != CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger))
+    if (VK_SUCCESS != vk::CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger))
     {
         throw std::runtime_error("failed to set up debug messenger!");
     }
@@ -271,7 +271,7 @@ class HelloTrangleApplication
 {
 public:
     HelloTrangleApplication()
-        : instance{createInstance()},
+        : instance{createVulkanInstance()},
           debugMessenger{setupDebugMessenger(instance)},
           physicalDevice{pickPhysicalDevice(instance)},
           logicalDevice{createLogicalDevice(physicalDevice)}
@@ -295,7 +295,7 @@ public:
 
         if constexpr (enableValidationLayers)
         {
-            DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+            vk::DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
         }
 
         vkDestroyInstance(instance, nullptr);

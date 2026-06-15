@@ -1,4 +1,4 @@
-#include "vulkan_property_support_info.hpp"
+#include "vulkan/property_support_info.hpp"
 
 #include <iterator>
 #include <span>
@@ -7,7 +7,7 @@
 
 #include "logger.hpp"
 
-namespace utility
+namespace vk 
 {
 namespace
 {

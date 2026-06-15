@@ -9,10 +9,13 @@ target_sources(vultex
   PRIVATE
   main.cpp
   window.cpp
-  vulkan_debug.cpp
-  vulkan_property_support_info.cpp
+  vulkan/debug.cpp
+  vulkan/property_support_info.cpp
   logger.cpp)
 
+target_include_directories(vultex
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(vultex
   PRIVATE
