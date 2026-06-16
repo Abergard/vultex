@@ -5,7 +5,6 @@
 
 #include "ui/window.hpp"
 #include "utility/logger.hpp"
-#include "vulkan/debug.hpp"
 #include "vulkan/vulkan.hpp"
 
 class HelloTrangleApplication
@@ -32,12 +31,7 @@ public:
         log::info("Cleanup resources");
 
         vkDestroyDevice(logicalDevice, nullptr);
-
-        if constexpr (enableValidationLayers)
-        {
-            vk::DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
-        }
-
+        vk::destroyDebugMessenger(instance, debugMessenger);
         vkDestroyInstance(instance, nullptr);
     }
 

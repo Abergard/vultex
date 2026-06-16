@@ -1,11 +1,59 @@
-#include "vulkan/debug.hpp"
+#include "debug.hpp"
 
 #include <format>
 
 #include "utility/logger.hpp"
 
-namespace vk
+namespace vk::details
 {
+
+namespace
+{
+
+const char* getDebugMessageType(const VkDebugUtilsMessageTypeFlagsEXT messageType)
+{
+    switch (messageType)
+    {
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
+        return "General";
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
+        return "Validation";
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
+        return "Performance";
+    default:
+        return "Default";
+    }
+}
+VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                             VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                             const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                             void* /*pUserData*/)
+{
+    const auto message = std::format("VK [{}] {}", getDebugMessageType(messageType), pCallbackData->pMessage);
+    switch (messageSeverity)
+    {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        log::info(message);
+        break;
+
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        log::debug(message);
+        break;
+
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        log::warn(message);
+        break;
+
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        log::error(message);
+        break;
+
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
+        break;
+    }
+    return VK_FALSE;
+}
+} // namespace
 
 void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {
@@ -56,48 +104,4 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
     func(instance, debugMessenger, pAllocator);
 }
 
-static const char* getDebugMessageType(const VkDebugUtilsMessageTypeFlagsEXT messageType)
-{
-    switch (messageType)
-    {
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
-        return "General";
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
-        return "Validation";
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
-        return "Performance";
-    default:
-        return "Default";
-    }
-}
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                                    VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                                    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                                    void* /*pUserData*/)
-{
-    const auto message = std::format("VK [{}] {}", getDebugMessageType(messageType), pCallbackData->pMessage);
-    switch (messageSeverity)
-    {
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        log::info(message);
-        break;
-
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        log::debug(message);
-        break;
-
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        log::warn(message);
-        break;
-
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        log::error(message);
-        break;
-
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
-        break;
-    }
-    return VK_FALSE;
-}
-} // namespace vk
+} // namespace vk::details

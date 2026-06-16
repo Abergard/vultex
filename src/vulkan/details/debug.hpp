@@ -1,7 +1,6 @@
 #pragma once
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan_core.h>
 
 #ifdef NDEBUG
 constexpr bool enableValidationLayers = false;
@@ -9,7 +8,7 @@ constexpr bool enableValidationLayers = false;
 constexpr bool enableValidationLayers = true;
 #endif
 
-namespace vk
+namespace vk::details
 {
 void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
@@ -22,11 +21,4 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
                                    VkDebugUtilsMessengerEXT debugMessenger,
                                    const VkAllocationCallbacks* pAllocator);
 
-static const char* getDebugMessageType(VkDebugUtilsMessageTypeFlagsEXT messageType);
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                                    VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                                    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                                    void* pUserData);
-
-} // namespace vk
+} // namespace vk::details

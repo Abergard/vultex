@@ -9,9 +9,9 @@ target_sources(vultex
   PRIVATE
   main.cpp
   ########## VULKAN SOURCES ###########
-  vulkan/debug.cpp
-  vulkan/property_support_info.cpp
   vulkan/vulkan.cpp
+  vulkan/details/debug.cpp
+  vulkan/details/property_support_info.cpp
   ########### UI SOURCES ##############
   ui/window.cpp
   ########### UTILITY SOURCES #########

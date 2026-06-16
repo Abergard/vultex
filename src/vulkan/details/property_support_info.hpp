@@ -3,7 +3,7 @@
 #include <map>
 #include <string>
 
-namespace vk
+namespace vk::details
 {
 
 using SupportMap = std::map<std::string, int>;
@@ -26,4 +26,4 @@ private:
 
 RequiredVulkanProperties check_required_extensions(std::uint32_t count, const char* const* names);
 RequiredVulkanProperties check_required_validation_layers(std::uint32_t count, const char* const* names);
-} // namespace vk
+} // namespace vk::details

@@ -1,4 +1,4 @@
-#include "vulkan/property_support_info.hpp"
+#include "property_support_info.hpp"
 
 #include <iterator>
 #include <span>
@@ -7,7 +7,7 @@
 
 #include "utility/logger.hpp"
 
-namespace vk
+namespace vk::details
 {
 namespace
 {
@@ -90,4 +90,4 @@ RequiredVulkanProperties check_required_validation_layers(const std::uint32_t co
     }
     return {"Layers", std::move(properties), count, names};
 }
-} // namespace vk
+} // namespace vk::details

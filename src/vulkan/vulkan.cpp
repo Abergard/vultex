@@ -1,4 +1,4 @@
-#include "vulkan/vulkan.hpp"
+#include "vulkan.hpp"
 
 #include <cstdint>
 #include <format>
@@ -10,8 +10,8 @@
 
 #include "ui/window.hpp"
 #include "utility/logger.hpp"
-#include "vulkan/debug.hpp"
-#include "vulkan/property_support_info.hpp"
+#include "vulkan/details/debug.hpp"
+#include "vulkan/details/property_support_info.hpp"
 
 namespace vk
 {
@@ -97,7 +97,7 @@ auto configureValidationLayers(auto& createInfo,
                                const auto& required_validation_layer_names,
                                auto& debugCreateInfo) -> void
 {
-    const auto required_validation_layers = vk::check_required_validation_layers(
+    const auto required_validation_layers = details::check_required_validation_layers(
         required_validation_layer_names.size(), required_validation_layer_names.data());
 
     required_validation_layers.log_properties();
@@ -109,14 +109,14 @@ auto configureValidationLayers(auto& createInfo,
     createInfo.enabledLayerCount = required_validation_layer_names.size();
     createInfo.ppEnabledLayerNames = required_validation_layer_names.data();
 
-    vk::populateDebugMessengerCreateInfo(debugCreateInfo);
+    details::populateDebugMessengerCreateInfo(debugCreateInfo);
     createInfo.pNext = &debugCreateInfo;
 }
 
 auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> void
 {
     const auto window_required_extensions =
-        vk::check_required_extensions(windowExtensions.size(), windowExtensions.data());
+        details::check_required_extensions(windowExtensions.size(), windowExtensions.data());
 
     log::info("EnabledExtensionCount: {}", windowExtensions.size());
     createInfo.enabledExtensionCount = windowExtensions.size();
@@ -183,14 +183,25 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
     log::info("Initialize debug messenger");
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
-    vk::populateDebugMessengerCreateInfo(createInfo);
+    details::populateDebugMessengerCreateInfo(createInfo);
 
     VkDebugUtilsMessengerEXT debugMessenger{nullptr};
-    if (VK_SUCCESS != vk::CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger))
+    if (VK_SUCCESS != details::CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger))
     {
         throw std::runtime_error("failed to set up debug messenger!");
     }
     return debugMessenger;
+}
+
+auto destroyDebugMessenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger) -> void
+{
+    if constexpr (!enableValidationLayers)
+    {
+        return;
+    }
+
+    log::info("Destroy debug messenger");
+    details::DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
 }
 
 [[nodiscard]] auto pickPhysicalDevice(VkInstance instance) -> std::pair<VkPhysicalDevice, std::uint32_t>
