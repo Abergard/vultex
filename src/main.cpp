@@ -3,22 +3,15 @@
 #include <cstdlib>
 #include <exception>
 
+#include "gfx/graphics.hpp"
 #include "ui/window.hpp"
 #include "utility/logger.hpp"
-#include "vulkan/vulkan.hpp"
 
 class HelloTrangleApplication
 {
 public:
     HelloTrangleApplication()
-        : instance{vk::createVulkanInstance()}, debugMessenger{vk::setupDebugMessenger(instance)}
     {
-        auto [physicalDevice, queueFamilyIndex] = vk::pickPhysicalDevice(instance);
-        logicalDevice = vk::createLogicalDevice(physicalDevice, queueFamilyIndex);
-
-        // get family queue indice from logical device
-        constexpr auto firstQueueIndex = 0;
-        vkGetDeviceQueue(logicalDevice, queueFamilyIndex, firstQueueIndex, &graphicsQueue);
     }
 
     HelloTrangleApplication(const HelloTrangleApplication&) = delete;
@@ -26,13 +19,8 @@ public:
     HelloTrangleApplication& operator=(const HelloTrangleApplication&) = delete;
     HelloTrangleApplication& operator=(HelloTrangleApplication&&) = delete;
 
-    ~HelloTrangleApplication()
+    ~HelloTrangleApplication() noexcept
     {
-        log::info("Cleanup resources");
-
-        vkDestroyDevice(logicalDevice, nullptr);
-        vk::destroyDebugMessenger(instance, debugMessenger);
-        vkDestroyInstance(instance, nullptr);
     }
 
     auto run() -> void
@@ -42,11 +30,7 @@ public:
 
 private:
     ui::Window window;
-    VkInstance instance;
-    VkDebugUtilsMessengerEXT debugMessenger;
-
-    VkDevice logicalDevice{nullptr};
-    VkQueue graphicsQueue{nullptr};
+    std::unique_ptr<gfx::Graphics> graphics{gfx::Graphics::create(gfx::Api::Vulkan)};
 };
 
 int main()

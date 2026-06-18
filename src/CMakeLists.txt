@@ -8,10 +8,11 @@ add_executable(vultex)
 target_sources(vultex
   PRIVATE
   main.cpp
-  ########## VULKAN SOURCES ###########
-  vulkan/vulkan.cpp
-  vulkan/details/debug.cpp
-  vulkan/details/property_support_info.cpp
+  ########## GRAPHIS SOURCES ###########
+  gfx/graphics.cpp
+  gfx/vulkan/vulkan.cpp
+  gfx/vulkan/details/debug.cpp
+  gfx/vulkan/details/property_support_info.cpp
   ########### UI SOURCES ##############
   ui/window.cpp
   ########### UTILITY SOURCES #########

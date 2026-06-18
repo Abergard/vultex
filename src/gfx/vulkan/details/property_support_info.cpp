@@ -7,7 +7,7 @@
 
 #include "utility/logger.hpp"
 
-namespace vk::details
+namespace gfx::vk::details
 {
 namespace
 {

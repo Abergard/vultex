@@ -6,14 +6,16 @@
 #include <map>
 #include <optional>
 #include <stdexcept>
+#include <utility>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
+#include "details/debug.hpp"
+#include "details/property_support_info.hpp"
 #include "ui/window.hpp"
 #include "utility/logger.hpp"
-#include "vulkan/details/debug.hpp"
-#include "vulkan/details/property_support_info.hpp"
 
-namespace vk
+namespace gfx::vk
 {
 
 namespace
@@ -109,11 +111,10 @@ auto configureValidationLayers(auto& createInfo,
     createInfo.enabledLayerCount = required_validation_layer_names.size();
     createInfo.ppEnabledLayerNames = required_validation_layer_names.data();
 
-    details::populateDebugMessengerCreateInfo(debugCreateInfo);
-    createInfo.pNext = &debugCreateInfo;
+    debugCreateInfo = details::populateDebugMessengerCreateInfo();
 }
 
-auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> void
+auto configureRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> void
 {
     const auto window_required_extensions =
         details::check_required_extensions(windowExtensions.size(), windowExtensions.data());
@@ -129,7 +130,6 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
                                              window_required_extensions.all_supported()));
     }
 }
-} // namespace
 
 [[nodiscard]] auto createVulkanInstance() -> VkInstance
 {
@@ -144,18 +144,19 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
     // global information about the entire program about extensions etc.
     VkInstanceCreateInfo createInfo{.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
                                     .pApplicationInfo = &appInfo};
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+    createInfo.pNext = &debugCreateInfo;
 
     // setup required extensions
-    auto windowExtensions = ui::Window::getRequiredExtensions(ui::GraphicsLibrary::Vulkan);
+    auto windowExtensions = ui::Window::getRequiredExtensions(gfx::Api::Vulkan);
     if constexpr (enableValidationLayers)
     {
         windowExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
-    getRequiredExtensions(createInfo, windowExtensions);
+    configureRequiredExtensions(createInfo, windowExtensions);
 
     // configure validation layers
-    const std::vector<char const*> required_validation_layer_names = {"VK_LAYER_KHRONOS_validation"};
-    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+    const auto required_validation_layer_names = std::vector{"VK_LAYER_KHRONOS_validation"};
     if constexpr (enableValidationLayers)
     {
         configureValidationLayers(createInfo, required_validation_layer_names, debugCreateInfo);
@@ -182,10 +183,9 @@ auto getRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> vo
 
     log::info("Initialize debug messenger");
 
-    VkDebugUtilsMessengerCreateInfoEXT createInfo{};
-    details::populateDebugMessengerCreateInfo(createInfo);
+    const auto createInfo = details::populateDebugMessengerCreateInfo();
+    auto* debugMessenger = VkDebugUtilsMessengerEXT{nullptr};
 
-    VkDebugUtilsMessengerEXT debugMessenger{nullptr};
     if (VK_SUCCESS != details::CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger))
     {
         throw std::runtime_error("failed to set up debug messenger!");
@@ -268,4 +268,26 @@ auto destroyDebugMessenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMe
 
     return logicalDevice;
 }
-} // namespace vk
+
+} // namespace
+
+Vulkan::Vulkan() : instance{createVulkanInstance()}, debugMessenger{setupDebugMessenger(instance)}
+{
+    log::info("Setup Vulkan resources");
+    auto [physicalDevice, queueFamilyIndex] = pickPhysicalDevice(instance);
+    logicalDevice = createLogicalDevice(physicalDevice, queueFamilyIndex);
+
+    // get family queue indice from logical device
+    constexpr auto firstQueueIndex = 0;
+    vkGetDeviceQueue(logicalDevice, queueFamilyIndex, firstQueueIndex, &graphicsQueue);
+    log::info("Graphics queue created");
+}
+
+Vulkan::~Vulkan() noexcept
+{
+    log::info("Cleanup Vulkan resources");
+    vkDestroyDevice(logicalDevice, nullptr);
+    destroyDebugMessenger(instance, debugMessenger);
+    vkDestroyInstance(instance, nullptr);
+}
+} // namespace gfx::vk

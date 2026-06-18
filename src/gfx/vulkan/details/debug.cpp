@@ -4,7 +4,7 @@
 
 #include "utility/logger.hpp"
 
-namespace vk::details
+namespace gfx::vk::details
 {
 
 namespace
@@ -55,8 +55,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBits
 }
 } // namespace
 
-void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
+auto populateDebugMessengerCreateInfo() -> VkDebugUtilsMessengerCreateInfoEXT
 {
+    VkDebugUtilsMessengerCreateInfoEXT createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 
     createInfo.messageSeverity =
@@ -69,6 +70,7 @@ void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create
 
     createInfo.pfnUserCallback = debugCallback;
     createInfo.pUserData = nullptr; // Optional
+    return createInfo;
 }
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,

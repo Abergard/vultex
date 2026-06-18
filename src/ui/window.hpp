@@ -2,17 +2,12 @@
 
 #include <vector>
 
+#include "gfx/api.hpp"
+
 struct GLFWwindow;
 
 namespace ui
 {
-enum class GraphicsLibrary : char
-{
-    Vulkan,
-    DirectX,
-    OpenGL
-};
-
 class Window
 {
 public:
@@ -25,7 +20,7 @@ public:
     Window& operator=(Window&&) = delete;
 
     void loop();
-    [[nodiscard]] static auto getRequiredExtensions(GraphicsLibrary) -> std::vector<const char*>;
+    [[nodiscard]] static auto getRequiredExtensions(gfx::Api) -> std::vector<const char*>;
 
 private:
     GLFWwindow* window{nullptr};

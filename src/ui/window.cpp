@@ -43,16 +43,16 @@ void Window::loop()
     log::info("Loop finished");
 }
 
-[[nodiscard]] auto Window::getRequiredExtensions(const GraphicsLibrary library) -> std::vector<const char*>
+[[nodiscard]] auto Window::getRequiredExtensions(const gfx::Api api) -> std::vector<const char*>
 {
-    switch (library)
+    switch (api)
     {
-    case GraphicsLibrary::DirectX:
+    case gfx::Api::DirectX:
         [[fallthrough]];
-    case GraphicsLibrary::OpenGL:
-        log::warn("Graphics library {} is not supported yet, fallback to Vulkan", static_cast<char>(library));
+    case gfx::Api::OpenGL:
+        log::warn("Graphics library {} is not supported yet, fallback to Vulkan", static_cast<char>(api));
         [[fallthrough]];
-    case GraphicsLibrary::Vulkan:
+    case gfx::Api::Vulkan:
         log::info("Using Vulkan graphics library");
         break;
     }

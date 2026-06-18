@@ -8,9 +8,9 @@ constexpr bool enableValidationLayers = false;
 constexpr bool enableValidationLayers = true;
 #endif
 
-namespace vk::details
+namespace gfx::vk::details
 {
-void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+VkDebugUtilsMessengerCreateInfoEXT populateDebugMessengerCreateInfo();
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
                                       const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
@@ -21,4 +21,4 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
                                    VkDebugUtilsMessengerEXT debugMessenger,
                                    const VkAllocationCallbacks* pAllocator);
 
-} // namespace vk::details
+} // namespace gfx::vk::details
