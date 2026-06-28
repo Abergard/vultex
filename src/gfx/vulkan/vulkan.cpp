@@ -147,20 +147,18 @@ auto configureRequiredExtensions(auto& createInfo, const auto& windowExtensions)
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
     createInfo.pNext = &debugCreateInfo;
 
-    // setup required extensions
     auto windowExtensions = ui::Window::getRequiredExtensions(gfx::Api::Vulkan);
-    if constexpr (enableValidationLayers)
-    {
-        windowExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-    configureRequiredExtensions(createInfo, windowExtensions);
 
     // configure validation layers
     const auto required_validation_layer_names = std::vector{"VK_LAYER_KHRONOS_validation"};
     if constexpr (enableValidationLayers)
     {
         configureValidationLayers(createInfo, required_validation_layer_names, debugCreateInfo);
+
+	windowExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
+
+    configureRequiredExtensions(createInfo, windowExtensions);
 
     VkInstance instance{nullptr};
     const auto create_instance_status = vkCreateInstance(&createInfo, nullptr, &instance);
