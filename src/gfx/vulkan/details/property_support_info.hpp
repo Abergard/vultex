@@ -2,28 +2,62 @@
 
 #include <map>
 #include <string>
+#include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace gfx::vk::details
 {
 
-using SupportMap = std::map<std::string, int>;
+// using SupportMap = std::map<std::string, int>;
 
-class RequiredVulkanProperties
+// class RequiredVulkanProperties
+// {
+// public:
+//     // RequiredVulkanProperties(std::string&& name,
+//     //                          SupportMap&& supported_extensions,
+//     //                          const std::vector<const char*>& required_extensions);
+//     [[nodiscard]] bool all_supported() const;
+//     void log_properties() const;
+
+//     // private:
+//     // TODO: refactor below class to not use friend
+//     // friend class VulkanPropertiesLogger;
+//     std::string property_type_name;
+//     SupportMap extensions{};
+//     bool all_required_extensions_supported{true};
+// };
+
+class VulkanProperties
 {
 public:
-    RequiredVulkanProperties(std::string&& name,
-                             SupportMap&& supported_extensions,
-                             std::uint32_t count,
-                             const char* const* names);
-    [[nodiscard]] bool all_supported() const;
+    VulkanProperties();
+
+    bool select_layers(const std::vector<const char*>& required_layers);
+    bool select_extensions(const std::vector<const char*>& required_extensions);
+
     void log_properties() const;
 
 private:
-    std::string property_type_name;
-    SupportMap extensions{};
-    bool all_required_extensions_supported{true};
+    enum class Availability
+    {
+        Unavailable = 0,
+        Available,
+        Used
+    };
+
+    using PropertyName = std::string;
+    using Availabilities = std::map<PropertyName, Availability>;
+
+    bool select_properties(const std::vector<const char*>& required_properties,
+                           Availabilities& property_availabilities);
+
+    std::string get_icon(Availability id) const;
+
+    Availabilities layers{};
+    std::vector<VkLayerProperties> availableLayers;
+
+    Availabilities extensions{};
+    std::map<PropertyName, std::vector<VkExtensionProperties>> layer_to_extensions{};
 };
 
-RequiredVulkanProperties check_required_extensions(std::uint32_t count, const char* const* names);
-RequiredVulkanProperties check_required_validation_layers(std::uint32_t count, const char* const* names);
 } // namespace gfx::vk::details

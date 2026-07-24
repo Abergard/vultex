@@ -97,38 +97,19 @@ namespace
 
 auto configureValidationLayers(auto& createInfo,
                                const auto& required_validation_layer_names,
-                               auto& debugCreateInfo) -> void
+                               auto& debugCreateInfo)
 {
-    const auto required_validation_layers = details::check_required_validation_layers(
-        required_validation_layer_names.size(), required_validation_layer_names.data());
-
-    required_validation_layers.log_properties();
-    if (!required_validation_layers.all_supported())
-
-    {
-        throw std::runtime_error("validation layers requested, but not available!");
-    }
     createInfo.enabledLayerCount = required_validation_layer_names.size();
     createInfo.ppEnabledLayerNames = required_validation_layer_names.data();
 
     debugCreateInfo = details::populateDebugMessengerCreateInfo();
 }
 
-auto configureRequiredExtensions(auto& createInfo, const auto& windowExtensions) -> void
+auto configureRequiredExtensions(auto& createInfo, const auto& windowExtensions)
 {
-    const auto window_required_extensions =
-        details::check_required_extensions(windowExtensions.size(), windowExtensions.data());
-
     log::info("EnabledExtensionCount: {}", windowExtensions.size());
     createInfo.enabledExtensionCount = windowExtensions.size();
     createInfo.ppEnabledExtensionNames = windowExtensions.data();
-
-    window_required_extensions.log_properties();
-    if (!window_required_extensions.all_supported())
-    {
-        throw std::runtime_error(std::format("Cannot create vulkan instance! window all supported: {}",
-                                             window_required_extensions.all_supported()));
-    }
 }
 
 [[nodiscard]] auto createVulkanInstance() -> VkInstance
@@ -147,18 +128,45 @@ auto configureRequiredExtensions(auto& createInfo, const auto& windowExtensions)
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
     createInfo.pNext = &debugCreateInfo;
 
+    auto required_validation_layer_names = std::vector<const char*>{};
     auto windowExtensions = ui::Window::getRequiredExtensions(gfx::Api::Vulkan);
 
-    // configure validation layers
-    const auto required_validation_layer_names = std::vector{"VK_LAYER_KHRONOS_validation"};
     if constexpr (enableValidationLayers)
     {
-        configureValidationLayers(createInfo, required_validation_layer_names, debugCreateInfo);
-
-	windowExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        required_validation_layer_names.push_back("VK_LAYER_KHRONOS_validation");
+        windowExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
+    details::VulkanProperties vkProperties{};
+    if (!vkProperties.select_layers(required_validation_layer_names))
+    {
+        vkProperties.log_properties();
+        std::string required_layers{};
+        for (const auto& layer : required_validation_layer_names)
+        {
+            required_layers += "\n- ";
+            required_layers += layer;
+        }
+        throw std::runtime_error(
+            std::format("Validation layers requested, but not available: {}", required_layers));
+    }
+    configureValidationLayers(createInfo, required_validation_layer_names, debugCreateInfo);
+
+    if (!vkProperties.select_extensions(windowExtensions))
+    {
+        vkProperties.log_properties();
+        std::string required_extensions{};
+        for (const auto& extension : windowExtensions)
+        {
+            required_extensions += "\n- ";
+            required_extensions += extension;
+        }
+        throw std::runtime_error(std::format(
+            "Cannot create vulkan instance! window extensions not supported: {}", required_extensions));
+    }
     configureRequiredExtensions(createInfo, windowExtensions);
+
+    vkProperties.log_properties();
 
     VkInstance instance{nullptr};
     const auto create_instance_status = vkCreateInstance(&createInfo, nullptr, &instance);
